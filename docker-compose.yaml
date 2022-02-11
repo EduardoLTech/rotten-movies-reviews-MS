@@ -1,0 +1,88 @@
+version: '3.7'
+
+volumes:
+  DB_data:
+  
+networks:
+  dudanw:
+    driver: bridge
+
+
+services:
+  movies:
+    image: teclinux/movies-ms:v1
+    build:
+      dockerfile: ./Dockerfile
+      context: ./movie/src
+    container_name: movies
+    ports:
+      - 8181:8181
+    networks:
+      - dudanw
+    depends_on:
+      - mongodb  
+    environment:
+      MONGODB_DB: admin
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: "27017"
+      MONGODB_USERNAME: mongouser
+      MONGODB_PASSWORD: mongopwd
+      MONGODB_URI: mongodb://mongouser:mongopwd@mongodb:27017/admin
+
+  review:
+    image: teclinux/review-ms:v1
+    build:
+      dockerfile: ./Dockerfile
+      context: ./review/src/Review.Web
+    container_name: review
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - dudanw
+    environment:
+          ConnectionStrings__MyConnection: Host=postgres;Database=pguser;Username=pguser;Password=Pg@123;
+    depends_on:
+      - postgres
+
+
+  rotten-potatoes-ms:
+    image: teclinux/rotten-ms:v1
+    build:
+        dockerfile: ./Dockerfile
+        context: ./rotten-potatoes-ms/src
+    container_name: rotten-potatoes-ms
+    ports:
+     - 5000:5000
+    networks:
+      - dudanw
+    depends_on:
+      - review
+      - movies        
+
+  mongodb:
+    image: mongo
+    container_name: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - DB_data:/mongo/db  
+    networks:
+      - dudanw
+    environment:
+          MONGO_INITDB_ROOT_USERNAME: mongouser
+          MONGO_INITDB_ROOT_PASSWORD: mongopwd
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - DB_data:/postgres/db
+    networks:
+      - dudanw
+    environment:
+          POSTGRES_USER: pguser
+          POSTGRES_PASSWORD: Pg@123
+    
